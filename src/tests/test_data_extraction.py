@@ -7,7 +7,9 @@ from src.data_extraction import fetch_data
 class TestFetchData(unittest.TestCase):
 
     @patch('src.data_extraction.NycTlcYellow')
-    def test_fetch_data(self, MockNycTlcYellow):
+    @patch('src.data_extraction.export_data')
+    @patch('src.data_extraction.process_data')
+    def test_fetch_data(self, MockProcessData, MockExportData, MockNycTlcYellow):
         # Set up the mock to return a small DataFrame
         mock_df = pd.DataFrame({
             'tpepPickupDateTime': ['2009-01-05 00:00:00'],
@@ -17,14 +19,16 @@ class TestFetchData(unittest.TestCase):
         })
         mock_instance = MockNycTlcYellow.return_value
         mock_instance.to_pandas_dataframe.return_value = mock_df
+        MockProcessData.return_value = mock_df
         start_date = '2009-01-01'
         end_date = '2009-03-01'
-        df = fetch_data(start_date, end_date)
-        self.assertIsInstance(df, pd.DataFrame)
-        self.assertFalse(df.empty)
-        self.assertTrue('tpepPickupDateTime' in df.columns)
-        self.assertTrue('paymentType' in df.columns)
-        self.assertEqual(len(df), 2)  # Assuming the function fetches two months' data
+        output_parquet_path = 'output/test_output.parquet'
+        output_csv_path = 'output/test_output.csv'
+        fetch_data(start_date, end_date, output_parquet_path, output_csv_path)
+        # Assertions to check the data frame contents
+        self.assertEqual(mock_instance.to_pandas_dataframe.call_count, 2)  # Assuming two months of data fetched
+        self.assertEqual(MockProcessData.call_count, 2)
+        self.assertEqual(MockExportData.call_count, 2)
 
 
 if __name__ == "__main__":

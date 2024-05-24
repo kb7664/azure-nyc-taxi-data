@@ -3,11 +3,6 @@ import pandas as pd
 
 
 def process_data(df):
-    # Initial summary
-    print("Initial Data Summary:")
-    print(df.describe())
-    print("Unique payment types before cleaning:")
-    print(df['paymentType'].unique())
     # Convert pickup datetime to datetime type
     df['tpepPickupDateTime'] = pd.to_datetime(df['tpepPickupDateTime'])
     # Extract year and month from pickup datetime
@@ -26,21 +21,17 @@ def process_data(df):
         'no charge': 'No Charge',
         'dispute': 'Dispute',
         'unknown': 'Unknown',
-        'voided trip': 'Voided Trip'
+        'voided trip': 'Voided Trip',
+        'noc': 'No Charge',
+        'unk': 'Unknown',
+        'dis': 'Dispute',
+        'voi': 'Voided Trip',
     }
-    # Cast paymentType to lower case and map to standardized values
     df['paymentType'] = df['paymentType'].str.lower().map(payment_type_map)
     # Drop rows with invalid payment types
     df = df.dropna(subset=['paymentType'])
-    # Log the number of rows after cleaning payment types
-    print(f"Number of rows after cleaning payment types: {len(df)}")
-    # Remove rows with negative or zero values in totalAmount and passengerCount
-    df = df[(df['totalAmount'] > 0) & (df['passengerCount'] > 0)]
-    # Log the number of rows after removing invalid amounts
-    print(f"Number of rows after removing invalid amounts: {len(df)}")
-    # Aggregated data summary
-    print("Aggregated Data Summary:")
-    print(df.describe())
+    # Remove rows with negative or zero values in passengerCount
+    df = df[(df['passengerCount'] > 0)]
     # Aggregate data by payment type, year, and month
     agg_df = df.groupby(['paymentType', 'year', 'month']).agg({
         'totalAmount': ['mean', 'median'],
@@ -51,9 +42,19 @@ def process_data(df):
     return agg_df
 
 
-def export_data(df, parquet_path, csv_path):
+def export_data(df, parquet_file_path, csv_file_path, append=False):
     # Ensure the output directory exists
-    os.makedirs(os.path.dirname(parquet_path), exist_ok=True)
-    df.to_parquet(parquet_path, index=False)
-    # Save the DataFrame as a CSV file as well
-    df.to_csv(csv_path, index=False)
+    os.makedirs(os.path.dirname(parquet_file_path), exist_ok=True)
+    if append:
+        # Save the DataFrame to a Parquet and a CSV file
+        if os.path.exists(parquet_file_path):
+            df.to_parquet(parquet_file_path, engine='fastparquet', append=True)
+        else:
+            df.to_parquet(parquet_file_path, engine='fastparquet')
+        if os.path.exists(csv_file_path):
+            df.to_csv(csv_file_path, index=False, mode='a', header=False)
+        else:
+            df.to_csv(csv_file_path, index=False)
+    else:
+        df.to_parquet(parquet_file_path, engine='fastparquet')
+        df.to_csv(csv_file_path, index=False)
