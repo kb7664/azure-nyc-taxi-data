@@ -104,6 +104,7 @@ The current implementation reads data in chunks to manage memory usage efficient
 
 ## Future Improvements
 
+- Investigate the source and reason for negative values in totalAmount_mean. Negative amounts might indicate refunds or corrections. Determine if they should be included in the average calculations.
 - Implement batch processing using Apache Airflow for better scalability.
 - Enhance data validation steps.
 - Enhance error handling.
